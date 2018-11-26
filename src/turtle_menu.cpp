@@ -12,14 +12,15 @@
 #include "opencv2/imgproc.hpp"
 #include <algorithm>
 #include <iterator>
+#include <stdlib.h>  
 
 const int distance_arr_size = 360;
-
+# define TAU           6.283185307  /* 2*pi */
 
 
 float distanceFromObsticle = 0;
 float distanceToMove = 0.5;
-float speed = 0.1;
+float speed = 0.3;
 float degree = 0.0174532925;
 float fov = 1.3962634;
 int fovDeg = 80;
@@ -28,6 +29,7 @@ int userColor;
 int theXCord = 0;
 float distanceFromObject = 0;
 float distancesArray[360];
+
 const int BLUE = 0;
 const int GREEN = 1;
 const int RED = 2;
@@ -38,6 +40,41 @@ void findDistanceFromObject(ros::NodeHandle n);
 void moveForward(ros::NodeHandle n);
 void turn(ros::NodeHandle n);
 void stopRobot(ros::NodeHandle n, geometry_msgs::Twist t);
+ void searchForObject(ros::NodeHandle n);
+ void turnRobot(ros::NodeHandle n, float radians);
+
+
+ class stack {
+  const static int  size = 4;
+    float values[size];
+  public:
+  	stack(){
+  		for (int i = 0; i < size; ++i)
+  		{
+  			values[i] = 0;
+  		}
+  	}
+    void push (float value){
+    	moveStackLeft();
+    	values[size-1] = value;
+    }
+    float sumofLast (int indexes){
+    	float sum = 0;
+    	for (int i = size - 1; i >= indexes; --i)
+  		{
+  			sum += values[i];
+  		}
+  		return sum;
+    }
+  private: 
+  	void moveStackLeft(){
+  		for (int i = 1; i < size; ++i)
+  		{
+  			values[i-1] = values[i];
+  		}
+  	}
+};
+
 
 void scanCallBack(const sensor_msgs::LaserScan::ConstPtr& msg){
 	distanceFromObsticle = msg->ranges[0];
@@ -86,6 +123,10 @@ int c = 10;
 
     case 3 : 
     findDistanceFromObject(n);
+    break;
+
+    case 4 : 
+    searchForObject(n);
     break;
 		}
 			
@@ -238,9 +279,10 @@ void cameraCallBack(const sensor_msgs::ImageConstPtr& msg){
 
 }
 void stopRobot(ros::NodeHandle n, geometry_msgs::Twist t){
-				int c=10;
+				int c=40;
 				 ros::Rate r(10);
-				 ;
+				   /* generate secret number between 1 and 10: */
+     
             t.linear.x = speed;
             ros::Publisher movement_pub = n.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
 
@@ -263,17 +305,8 @@ void stopRobot(ros::NodeHandle n, geometry_msgs::Twist t){
 			c=10;
 }
  void moveForward(ros::NodeHandle n){
-  // int c = 10;
-  // ros::Rate r(10); // 10 hz
-  //     while (c)
-  //     {
-  //       ros::spinOnce();
-  //       r.sleep();
-  //       c--;
-        
-  //     }
-  //     c=10;
-  ros::spinOnce();
+
+   ros::spinOnce();
 
  		if (distanceFromObsticle > distanceToMove){
  			 
@@ -333,3 +366,83 @@ void stopRobot(ros::NodeHandle n, geometry_msgs::Twist t){
       //move
 
  }
+ void turnRobot(ros::NodeHandle n, float radians){
+ 	float turnSpeed = 0.5;
+ 	 float dur = radians / turnSpeed;
+      geometry_msgs::Twist t;
+    
+        t.angular.z = -turnSpeed;
+        ros::Publisher movement_pub = n.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
+
+        ros::Rate r(10);
+      ros::Time start = ros::Time::now();
+      while(ros::Time::now() - start < ros::Duration(dur))
+      {
+        printf("Sending move message\n");
+          movement_pub.publish(t);
+
+          ros::spinOnce();
+          r.sleep();
+      }
+      
+ }
+
+  void searchForObject(ros::NodeHandle n){
+
+  	ros::spinOnce();
+		int randomNumber = rand() % 3;
+		 stack angleStack;
+		float minDistance = 0.5;
+		float angleCandidat;
+  		bool shouldGenerateAgain = true;
+ 			 
+ 			geometry_msgs::Twist t;
+            t.linear.x = speed;
+            t.angular.z = 0;
+            ros::Publisher movement_pub = n.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
+
+            ros::Rate r(10);
+            while (true){
+						
+				printf("Sending move message\n");
+					    if (minDistance  < distanceFromObsticle){
+
+			 		   	shouldGenerateAgain = true;
+			 		   
+			    movement_pub.publish(t);
+					}
+			    ros::spinOnce();
+			    r.sleep();
+					printf("The distance is %f \n", distanceFromObsticle);
+		 		   if (distanceFromObsticle < minDistance){
+
+					shouldGenerateAgain = true;
+		 		   	while (shouldGenerateAgain){
+				 		   	randomNumber = rand() % 3 + 1;
+				 		   	angleCandidat = TAU / randomNumber;
+			 		   if (angleStack.sumofLast(1) + angleCandidat == TAU){
+			 		   		shouldGenerateAgain = true;
+			 		   }else
+			 		  if (angleStack.sumofLast(2) + angleCandidat == TAU){
+			 		  		shouldGenerateAgain = true;
+			 		   }else
+			 		   if (angleStack.sumofLast(3) + angleCandidat == TAU){
+			 		   		shouldGenerateAgain = true;
+			 		   }else {
+
+			 		   	shouldGenerateAgain = false;
+			 		   }
+
+		 		   }
+		 		   angleStack.push(angleCandidat);
+		 		   turnRobot(n,angleCandidat);
+		 		   }
+		 		   	}
+
+			// //stop
+
+				stopRobot(n, t);
+ 			//move
+ 
+}
+
