@@ -373,7 +373,7 @@ void stopRobot(ros::NodeHandle n, geometry_msgs::Twist t){
  void turnRobot(ros::NodeHandle n, float radians){
  	theXCord = 0;
  	float turnSpeed = 0.5;
- 	 float dur = radians / turnSpeed;
+ 	 float dur = (radians + TAU) / turnSpeed;
       geometry_msgs::Twist t;
     
         t.angular.z = -turnSpeed;
@@ -381,7 +381,7 @@ void stopRobot(ros::NodeHandle n, geometry_msgs::Twist t){
 
         ros::Rate r(10);
       ros::Time start = ros::Time::now();
-      while((ros::Time::now() - start < ros::Duration(dur)) && (theXCord < 0 ))
+      while((ros::Time::now() - start < ros::Duration(dur)) && (theXCord <= 0 ))
       {
         printf("Sending move message\n");
           movement_pub.publish(t);
@@ -426,7 +426,7 @@ theXCord = 0;
 			    r.sleep();
 					printf("The distance is %f \n", distanceFromObsticle);
 		 		   if (distanceFromObsticle < minDistance){
-
+		 		   			printf("generating angle");
 					shouldGenerateAgain = true;
 		 		   	while (shouldGenerateAgain){
 				 		   	randomNumber = rand() % 3 + 1;
