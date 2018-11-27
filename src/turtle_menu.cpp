@@ -257,6 +257,7 @@ void cameraCallBack(const sensor_msgs::ImageConstPtr& msg){
 }
 
 void stopRobot(ros::NodeHandle n, geometry_msgs::Twist t){
+<<<<<<< HEAD
 	cout<<"in stop robot"<<endl;
 	int c=10;
 	ros::Rate r(10);
@@ -314,6 +315,61 @@ void moveForward(ros::NodeHandle n){
 		}
 	 
 		// //stop
+=======
+				int c=10;
+				 ros::Rate r(5);
+				   /* generate secret number between 1 and 10: */
+     
+            t.linear.x = speed;
+            ros::Publisher movement_pub = n.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
+
+    	while (c){
+					if (t.linear.x >=-0.04){
+					t.linear.x -=0.02;
+					}
+	      		t.angular.z =0;
+				movement_pub.publish(t);
+				ros::spinOnce();
+				c--;
+				r.sleep();
+			}
+			int k = 10;
+			while (k){
+				r.sleep();
+				t.linear.x =0.0;
+	      		t.angular.z =0;
+				movement_pub.publish(t);
+				ros::spinOnce();
+				k--;
+				
+			}
+		 	k=10;
+			c=10;
+}
+ void moveForward(ros::NodeHandle n){
+
+   ros::spinOnce();
+
+ 		if (distanceFromObsticle > distanceToMove){
+ 			 
+ 			geometry_msgs::Twist t;
+            t.linear.x = speed;
+            t.angular.z = 0;
+            ros::Publisher movement_pub = n.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
+
+            ros::Rate r(10);
+			ros::Time start = ros::Time::now();
+			while(ros::Time::now() - start < ros::Duration(5.0))
+			{
+				printf("Sending move message\n");
+			    movement_pub.publish(t);
+
+			    ros::spinOnce();
+			    r.sleep();
+			}
+		 
+			// //stop
+>>>>>>> refs/remotes/origin/master
 
 			stopRobot(n, t);
 		//move
@@ -350,6 +406,7 @@ void turn(ros::NodeHandle n, float degrees){
 	  //move
 	cout<<"exiting turn"<<endl;
  }
+<<<<<<< HEAD
 void turnRobot(ros::NodeHandle n, float radians){
 	theXCord = 0;
 	float turnSpeed = 0.5;
@@ -390,6 +447,29 @@ std::string getColorFromUser (){
 	}
 	return colorName;
 }
+=======
+ void turnRobot(ros::NodeHandle n, float radians){
+ 	theXCord = 0;
+ 	float turnSpeed = 0.5;
+ 	 float dur = (radians + TAU) / turnSpeed;
+      geometry_msgs::Twist t;
+    
+        t.angular.z = -turnSpeed;
+        ros::Publisher movement_pub = n.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
+
+        ros::Rate r(10);
+      ros::Time start = ros::Time::now();
+      while((ros::Time::now() - start < ros::Duration(dur)) && (theXCord <= 0 ))
+      {
+        printf("Sending move message\n");
+          movement_pub.publish(t);
+
+          ros::spinOnce();
+          r.sleep();
+      }
+      
+ }
+>>>>>>> refs/remotes/origin/master
 
 void searchForObject(ros::NodeHandle n){
 	cout<<"in searchForObject"<<endl;
@@ -420,6 +500,7 @@ void searchForObject(ros::NodeHandle n){
 			movement_pub.publish(t);//pub	
 		}
 
+<<<<<<< HEAD
 		ros::spinOnce();
 		printf("The distance is %f \n", distanceFromObsticle);
 	    if (distanceFromObsticle < minDistance){
@@ -430,6 +511,31 @@ void searchForObject(ros::NodeHandle n){
 				randomNumber = rand() % 3 + 1;
 				angleCandidat = (TAU / 4) * randomNumber;
 	   			if (angleStack.sumofLast(1) + angleCandidat == TAU){
+=======
+			userColor = BLUE;
+
+ 			geometry_msgs::Twist t;
+            t.linear.x = speed;
+            t.angular.z = 0;
+            ros::Publisher movement_pub = n.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
+
+            ros::Rate r(10);
+         
+            while (theXCord <= 0 ){
+						
+						printf("The distance from obsticle is %f\n", distanceFromObsticle);
+					    if (minDistance  < distanceFromObsticle){
+
+			 		   	shouldGenerateAgain = true;
+			 		   
+			    movement_pub.publish(t);//pub
+					}
+			    ros::spinOnce();
+			    r.sleep();
+					printf("The distance is %f \n", distanceFromObsticle);
+		 		   if (distanceFromObsticle < minDistance){
+		 		   			printf("generating angle");
+>>>>>>> refs/remotes/origin/master
 					shouldGenerateAgain = true;
 			   	}else if (angleStack.sumofLast(2) + angleCandidat == TAU){
 					shouldGenerateAgain = true;
