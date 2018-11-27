@@ -415,7 +415,7 @@ theXCord = 0;
          
             while (theXCord <= 0 ){
 						
-				
+						printf("The distance from obsticle is %f\n", distanceFromObsticle);
 					    if (minDistance  < distanceFromObsticle){
 
 			 		   	shouldGenerateAgain = true;
