@@ -34,7 +34,7 @@ const int BLUE = 0;
 const int GREEN = 1;
 const int RED = 2;
 
-
+void identifyObject(ros::NodeHandle n);
 void cameraCallBack(const sensor_msgs::ImageConstPtr& msg);
 void findDistanceFromObject(ros::NodeHandle n);
 void moveForward(ros::NodeHandle n);
@@ -191,25 +191,28 @@ int c = 10;
       	// calculte the angle
       	// get the distance from the array
  }
+ void identifyObject(ros::NodeHandle n){
+
+ }
 bool isRed(int * pixel){
-        return ((pixel[2] > 0) && (pixel[1]==0)
-            && ( pixel[0] == 0)
+        return ((pixel[2] > 0) && (pixel[2] > pixel[1])
+            && ( pixel[0]< pixel[2])
             
             );
 
     }
 
     bool isGreen(int * pixel){
-         return ((pixel[1] > 0) && (pixel[0]==0)
-            && ( pixel[2] == 0)
+         return ((pixel[1] > 0) && (pixel[0]< pixel[1])
+            && ( pixel[2] < pixel[1])
             
             );
      
     }
 
     bool isBlue(int * pixel){
-         return ((pixel[0] > 0) && (pixel[1]==0)
-            && ( pixel[2] == 0)
+         return ((pixel[0] > 0) && (pixel[1]< pixel[0])
+            && ( pixel[2] < pixel[0])
             
             );
        
@@ -229,7 +232,6 @@ bool isRed(int * pixel){
         return -1;
     }
 void cameraCallBack(const sensor_msgs::ImageConstPtr& msg){
-	printf("Got image\n");
 	cv::Mat display = cv_bridge::toCvShare(msg, "bgr8")->image;
 
 	 int rows = display.rows;
@@ -258,14 +260,16 @@ void cameraCallBack(const sensor_msgs::ImageConstPtr& msg){
        
                 if (color == user_choice){
                     output_array[k++] = j;
-                    printf("G %u B %u R %u\n", pixel[0], pixel[1], pixel[2] );
-               		printf("adding cord color %d %d \n", i,j);
+                    //printf("B %u G %u R %u\n", pixel[0], pixel[1], pixel[2] );
+               		//printf("adding cord color %d %d \n", i,j);
                     // int answer[2] = {i, j};
                     // return &answer;
                 }
             }
          } 
+         if(k>0){
          printf("found X %d, the k is %d\n", output_array[k/2], k);
+         }
           theXCord = output_array[k/2];
 
 
@@ -367,6 +371,7 @@ void stopRobot(ros::NodeHandle n, geometry_msgs::Twist t){
 
  }
  void turnRobot(ros::NodeHandle n, float radians){
+ 	theXCord = 0;
  	float turnSpeed = 0.5;
  	 float dur = radians / turnSpeed;
       geometry_msgs::Twist t;
@@ -376,7 +381,7 @@ void stopRobot(ros::NodeHandle n, geometry_msgs::Twist t){
 
         ros::Rate r(10);
       ros::Time start = ros::Time::now();
-      while(ros::Time::now() - start < ros::Duration(dur))
+      while((ros::Time::now() - start < ros::Duration(dur)) && (theXCord < 0 ))
       {
         printf("Sending move message\n");
           movement_pub.publish(t);
@@ -388,7 +393,7 @@ void stopRobot(ros::NodeHandle n, geometry_msgs::Twist t){
  }
 
   void searchForObject(ros::NodeHandle n){
-
+theXCord = 0;
   	ros::spinOnce();
 		int randomNumber = rand() % 3;
 		 stack angleStack;
@@ -396,15 +401,21 @@ void stopRobot(ros::NodeHandle n, geometry_msgs::Twist t){
 		float angleCandidat;
   		bool shouldGenerateAgain = true;
  			 
+ 			 ros::Subscriber sub = n.subscribe("/camera/image_raw", 100, cameraCallBack);
+		 
+
+			userColor = BLUE;
+
  			geometry_msgs::Twist t;
             t.linear.x = speed;
             t.angular.z = 0;
             ros::Publisher movement_pub = n.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
 
             ros::Rate r(10);
-            while (true){
+         
+            while (theXCord <= 0 ){
 						
-				printf("Sending move message\n");
+				
 					    if (minDistance  < distanceFromObsticle){
 
 			 		   	shouldGenerateAgain = true;
@@ -438,7 +449,7 @@ void stopRobot(ros::NodeHandle n, geometry_msgs::Twist t){
 		 		   turnRobot(n,angleCandidat);
 		 		   }
 		 		   	}
-
+		 		   	printf("the x is %d, stopping the robot \n", theXCord);
 			// //stop
 
 				stopRobot(n, t);
