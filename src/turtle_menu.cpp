@@ -420,7 +420,7 @@ theXCord = 0;
 
 			 		   	shouldGenerateAgain = true;
 			 		   
-			    movement_pub.publish(t);
+			    movement_pub.publish(t);//pub
 					}
 			    ros::spinOnce();
 			    r.sleep();
