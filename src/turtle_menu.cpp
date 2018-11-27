@@ -20,7 +20,7 @@ const int distance_arr_size = 360;
 
 float distanceFromObsticle = 0;
 float distanceToMove = 0.5;
-float speed = 0.3;
+float speed = 0.1;
 float degree = 0.0174532925;
 float fov = 1.3962634;
 int fovDeg = 80;
@@ -283,29 +283,34 @@ void cameraCallBack(const sensor_msgs::ImageConstPtr& msg){
 
 }
 void stopRobot(ros::NodeHandle n, geometry_msgs::Twist t){
-				int c=40;
-				 ros::Rate r(10);
+				int c=10;
+				 ros::Rate r(5);
 				   /* generate secret number between 1 and 10: */
      
             t.linear.x = speed;
             ros::Publisher movement_pub = n.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
 
-    	while (c)
-			{
-				if (t.linear.x >=0.02){
- 
-				t.linear.x -=0.02;
-				}
-
-       t.angular.z =0;
- 
- 
-			movement_pub.publish(t);
-			ros::spinOnce();
-			c--;
-			r.sleep();
+    	while (c){
+					if (t.linear.x >=-0.04){
+					t.linear.x -=0.02;
+					}
+	      		t.angular.z =0;
+				movement_pub.publish(t);
+				ros::spinOnce();
+				c--;
+				r.sleep();
 			}
-		 
+			int k = 10;
+			while (k){
+				r.sleep();
+				t.linear.x =0.0;
+	      		t.angular.z =0;
+				movement_pub.publish(t);
+				ros::spinOnce();
+				k--;
+				
+			}
+		 	k=10;
 			c=10;
 }
  void moveForward(ros::NodeHandle n){
