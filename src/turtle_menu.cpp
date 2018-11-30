@@ -18,9 +18,10 @@
 using namespace std;
 const int distance_arr_size = 360;
 # define TAU           6.283185307  /* 2*pi */
+# define e         2.71828182846
 
 
-float distanceFromObsticle = 0;
+float distanceFromObsticle = 500;
 float distanceToMove = 0.5;
 float speed = 0.1;
 float degree = 0.0174532925;
@@ -53,7 +54,9 @@ void turnRobot(ros::NodeHandle n, float radians);
 string getColorFromUser();
 float getDegreeFromX();
 void moveToObject(ros::NodeHandle n);
-
+float calculteSpeedByTime(double x, float distance);
+float getVelocity(double t);
+void turnDistance (ros::NodeHandle n, bool left, double distance);
 class stack {
   	const static int  size = 4;
 	float values[size];
@@ -90,7 +93,7 @@ void scanCallBack(const sensor_msgs::LaserScan::ConstPtr& msg){
 
 	distanceFromObsticle = msg->ranges[0];
 	for (int i = 0; i < distance_arr_size; ++i){
-		if (((i <= 5) || (i >= 354)) && (msg->ranges[i] < distanceFromObsticle))
+		if (((i <= 5) || (i >= 355)) && (msg->ranges[i] < distanceFromObsticle))
 		{
 			distanceFromObsticle = msg->ranges[i];
 		}
@@ -274,7 +277,7 @@ void cameraCallBack(const sensor_msgs::ImageConstPtr& msg){
 }
 
 void stopRobot(ros::NodeHandle n, geometry_msgs::Twist t){
-	cout<<"in stop robot"<<endl;
+	 
 	int c=10;
 	ros::Rate r(10);
 
@@ -293,9 +296,9 @@ void stopRobot(ros::NodeHandle n, geometry_msgs::Twist t){
 	// 	r.sleep();
 	// }
 	int k = 10;
-	cout<<"stop robot entering while"<<endl;
+ 
 	while (k){
-		cout<<"stop robot k = "<<k<<endl;
+	 
 		r.sleep();
 		t.linear.x = 0.0;
 		t.angular.z = 0;
@@ -303,10 +306,10 @@ void stopRobot(ros::NodeHandle n, geometry_msgs::Twist t){
 		ros::spinOnce();
 		k--;
 	}
-	cout<<"stop robot exited while"<<endl;
+ 
 	k=10;
 	c=10;
-	cout<<"exiting stop robot"<<endl;
+ 
 }
 void moveForward(ros::NodeHandle n){
 
@@ -321,51 +324,90 @@ void moveForward(ros::NodeHandle n){
 
 		ros::Rate r(40);
 		ros::Time start = ros::Time::now();
-		while(ros::Time::now() - start < ros::Duration(5.0))
-		{
-			//printf("Sending move message\n");
-			movement_pub.publish(t);
+			while(ros::Time::now() - start < ros::Duration(7.0))
+			{
+				double time = (ros::Time::now() - start).toSec();
+				t.linear.x = calculteSpeedByTime(time,0.5);
+				printf("Sending move message, the speed is %f \n", t.linear.x);
+				if ( t.linear.x < 0.01) {
+					t.linear.x = 0;
+				}
+			    movement_pub.publish(t);
 
-			ros::spinOnce();
-			r.sleep();
-		}
+			    ros::spinOnce();
+			    r.sleep();
+			}
 	 
-		// //stop
-
-			stopRobot(n, t);
-		//move
 	}else{
 		printf("Cant move, the distance from obsticle is %f \n", distanceFromObsticle );
 	}
  }
 
-
-void turn(ros::NodeHandle n, float degrees){
-	cout<<"in turn"<<endl;
+void turnDistance (ros::NodeHandle n, bool left, double distance){
 	float turnSpeed = 0.2;
+	int degrees = 1;
 	float radians = degrees * degree;
 
+	 
+		
 	float dur = radians / turnSpeed;
 	geometry_msgs::Twist t;
-
-	t.angular.z = -turnSpeed;
-	//ros::Publisher movement_pub = n.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
-
+ 
+		if (dur < 0){
+			dur = dur * -1;
+		}
+		if (left){
+			t.angular.z = turnSpeed;
+		}else{
+			t.angular.z = -turnSpeed;
+		}	
+	
+ 
 	ros::Rate r(40);
 	ros::Time start = ros::Time::now();
-	while(ros::Time::now() - start < ros::Duration(dur)){
-		//printf("Sending move message\n");
+	while(distanceFromObsticle > distance){
+		 
 		movement_pub.publish(t);
 
 		ros::spinOnce();
 		r.sleep();
   	}
 	 
-	  // //stop
+	 
 
 	stopRobot(n, t);
-	  //move
-	cout<<"exiting turn"<<endl;
+}
+
+void turn(ros::NodeHandle n, float degrees){
+
+ 
+	float turnSpeed = 0.2;
+	float radians = degrees * degree;
+
+	 
+		
+	float dur = radians / turnSpeed;
+	geometry_msgs::Twist t;
+ 
+		if (dur < 0){
+			dur = dur * -1;
+		}	
+	t.angular.z = -turnSpeed;
+ 
+	ros::Rate r(40);
+	ros::Time start = ros::Time::now();
+	while(ros::Time::now() - start < ros::Duration(dur)){
+		 
+		movement_pub.publish(t);
+
+		ros::spinOnce();
+		r.sleep();
+  	}
+	 
+	 
+
+	stopRobot(n, t);
+ 
  }
 void turnRobot(ros::NodeHandle n, float radians){
 	theXCord = 0;
@@ -381,13 +423,16 @@ void turnRobot(ros::NodeHandle n, float radians){
 
 	ros::Rate r(40);
 	ros::Time start = ros::Time::now();
-	while((ros::Time::now() - start < ros::Duration(dur)) && (theXCord <= 0 )){
-		//printf("Sending move message\n");
+	while((ros::Time::now() - start < ros::Duration(dur)) 
+		&& ((theXCord <=0 ) || ((theXCord > 50) && (theXCord < 750)))){
+		
 		movement_pub.publish(t);
 
 		ros::spinOnce();
 		r.sleep();
-	}  
+	} 
+	cout<<"stopping the turn, the X is" << theXCord<<endl;
+	stopRobot(n,t); 
 }
 
 std::string getColorFromUser (){
@@ -409,18 +454,20 @@ std::string getColorFromUser (){
 }
 
 void searchForObject(ros::NodeHandle n){
+
 	cout<<"in searchForObject"<<endl;
 	theXCord = 0;
 	ros::spinOnce();
 	int randomNumber = rand() % 3;
 	stack angleStack;
-	float minDistance = 0.5;
+	float minDistance = 1.0;
 	float angleCandidat;
 	bool shouldGenerateAgain = true;
+	float mu = 3.0;
 
 
 	geometry_msgs::Twist t;
-	t.linear.x = speed;
+	//t.linear.x = speed;
 	t.angular.z = 0;
 	//ros::Publisher movement_pub = n.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
 
@@ -429,18 +476,75 @@ void searchForObject(ros::NodeHandle n){
 	ros::Rate r(40);
 	ros::spinOnce();
 	turnRobot(n,0);
+	double currentTime = 0;
+	double savedTime = 0;
+		 ros::Time start;
+		 bool isSavedTime  = false;
+		 bool theBotTurned = true;
 		 
-	while ((theXCord > 50) && (theXCord < 750)){
-		r.sleep();	
+	while (theXCord <= 0){
+		if (theBotTurned){
+			 isSavedTime = false;
+			start = ros::Time::now();
+			theBotTurned = false;
+		}
 		printf("The distance from obsticle is %f\n", distanceFromObsticle);
 		if (minDistance  < distanceFromObsticle){
-			shouldGenerateAgain = true;  
+			
+			currentTime = (ros::Time::now() - start).toSec();
+		
+			// constanst speed
+			if ( currentTime > mu){
+				cout<<"In constanst speed"<<endl;
+				if (!isSavedTime){
+					savedTime = currentTime;
+					isSavedTime = true;
+				}
+				t.linear.x = getVelocity(savedTime);
+			}
+			else{ // acceleration
+				cout<<"In acceleration speed"<<endl;
+				savedTime = currentTime;
+				t.linear.x = getVelocity(currentTime);
+				
+			}
+
 			movement_pub.publish(t);//pub	
 		}
-
+		r.sleep();	
 		ros::spinOnce();
 		printf("The distance is %f \n", distanceFromObsticle);
 	    if (distanceFromObsticle < minDistance){
+
+	    if (t.linear.x > 0){
+			
+					cout<<"In stoping, the t.linear.x "<< t.linear.x <<endl;
+					cout<<"In stoping, the savedTime "<< savedTime <<endl;
+				
+
+					savedTime = mu - savedTime;
+					if (savedTime < 0)
+					{
+						savedTime =0 ;
+					}
+					cout<<" the updated savedTime "<< savedTime <<endl;
+					start = ros::Time::now();
+					currentTime = (ros::Time::now() - start).toSec() ;
+					while (currentTime < mu - savedTime +1){
+									cout<<" mu "<< mu <<endl;
+									cout<<" currentTime "<< currentTime <<endl;
+									cout<<" savedTime "<< savedTime <<endl;
+						t.linear.x = getVelocity(mu + currentTime + savedTime);
+						if ( t.linear.x < 0.01) {
+							t.linear.x = 0;
+							}
+						movement_pub.publish(t);
+						currentTime = (ros::Time::now() - start).toSec() ;
+						r.sleep();
+					}
+		}
+
+
 			printf("generating angle");
 			shouldGenerateAgain = true;
 
@@ -459,10 +563,12 @@ void searchForObject(ros::NodeHandle n){
 	   		}
 		   	angleStack.push(angleCandidat);
 		   	turnRobot(n,angleCandidat);
+		   	theBotTurned = true;
 	   	}
 	}
+	printf("exited find while, moving to object, the x cord is %f \n", theXCord);
 	moveToObject(n);
-	printf("the x is %d, stopping the robot \n", theXCord);
+
 	// //stop
 
 	//move
@@ -471,32 +577,128 @@ void searchForObject(ros::NodeHandle n){
 void moveToObject(ros::NodeHandle n){
 	cout<<"in move to object"<<endl;
 	float degrees = getDegreeFromX();
+	int xBeforeTurn = theXCord;
+	cout<< "turning to the object" << degrees << endl;
 	turn(n,degrees);
 	cout<<"moving towards object..."<<endl;
-
+	// turn back
+	if (distanceFromObsticle < 1.0){
+		if (degrees > 0 ){
+			turnDistance(n,true, 1.0);
+		}
+		else
+		{
+			turnDistance(n,false, 1.0);	
+		}
+	}
 	ros::spinOnce();
 	geometry_msgs::Twist t;
-	t.linear.x = speed;
+	//t.linear.x = speed;
 	t.angular.z = 0;
-
+		 double currentTime = 0;
+		 double savedTime = 0;
+		 ros::Time start ;
+		 bool isSavedTime  = false;
+		 bool theBotTurned = true;
+		 	float mu = 3.0;
 	ros::Rate r(40);
 	cout<<"the x is: "<<theXCord<<endl;
 	cout<<"the distance is: "<<distanceFromObsticle<<endl;
-	while((distanceFromObsticle > distanceToMove) && ((theXCord > 50) && (theXCord < 750)))
+	start = ros::Time::now();
+	while((distanceFromObsticle > 1.0) && (theXCord > 0))
 	{
 		//printf("Sending move message\n");
 		cout<<"moving... the x is: "<<theXCord<<endl;
-		movement_pub.publish(t);
+		if(theXCord == -1){break;}
+			currentTime = (ros::Time::now() - start).toSec();
+			// constanst speed
+			if ( currentTime > mu){
+				cout<<" moveToObject : In constanst speed"<<endl;
+				if (!isSavedTime){
+					savedTime = currentTime;
+					isSavedTime = true;
+				}
+				t.linear.x = getVelocity(savedTime);
+			}
+			else{ // acceleration
+				cout<<"moveToObject : In acceleration speed"<<endl;
+				savedTime = currentTime;
+				t.linear.x = getVelocity(currentTime);
+				
+			}
+
+			movement_pub.publish(t);//pub	
+
+
+
 		ros::spinOnce();
 		r.sleep();
 	}
 	cout<<"### exited while, distance from obsticle is: "<<distanceFromObsticle<<" x is: "<<theXCord<<endl;
-	stopRobot(n, t);
-	if ((theXCord <= 150) || (theXCord >= 600)){
+			    if (t.linear.x > 0){
+			
+					cout<<"moveToObject : In stoping, the t.linear.x "<< t.linear.x <<endl;
+					cout<<"moveToObject :In stoping, the savedTime "<< savedTime <<endl;
+				
+
+					savedTime = mu - savedTime;
+					if (savedTime < 0)
+					{
+						savedTime =0 ;
+					}
+					cout<<"moveToObject: the updated savedTime "<< savedTime <<endl;
+					start = ros::Time::now();
+					currentTime = (ros::Time::now() - start).toSec() ;
+					while (currentTime < mu - savedTime +1){
+									cout<<"moveToObject: mu "<< mu <<endl;
+									cout<<"moveToObject: currentTime "<< currentTime <<endl;
+									cout<<"moveToObject: savedTime "<< savedTime <<endl;
+						t.linear.x = getVelocity(mu + currentTime + savedTime);
+						if ( t.linear.x < 0.01) {
+							t.linear.x = 0;
+							}
+						movement_pub.publish(t);
+						currentTime = (ros::Time::now() - start).toSec() ;
+						r.sleep();
+					}
+		}
+	//stopRobot(n, t);
+		cout<<"*** before recursive calls "<<endl;
+		cout<<"*** theXCord is " << theXCord <<endl;
+		cout<<"*** distanceFromObsticle is " << distanceFromObsticle <<endl;
+	if (theXCord == -1){
+		cout<<"calling recursive searchForObject" << endl;
 		searchForObject(n);
 	}
-	if (distanceFromObsticle > distanceToMove){
+	if (distanceFromObsticle > 1.0){
+			cout<<"calling recursive moveToObject" << endl;
 	 	moveToObject(n);
+
 	}
 	cout<<"Success!!"<<endl;
 }
+
+float calculteSpeedByTime(double t, float distance){
+	float k = 1 / (2*sqrt(TAU));
+ 
+	float mu = 3.0;
+	float p = -pow((t - mu),2)/4;
+	float res = k* pow(e, p);
+	printf("The time is %f ", t);
+	cout<<" the speed is " << res << endl;
+	return distance * res;
+
+}
+// 1/sqrt(2pi)*e^(-(x-2))
+float getVelocity(double t){
+	
+	float k = 1 / (2*sqrt(TAU));
+	float mu = 3.0;
+	float p = -pow((t - mu),2)/4;
+	float res = k* pow(e, p);
+	printf("The time is %f ", t);
+	cout<<" the speed is " << res << endl;
+	return res;
+
+}
+
